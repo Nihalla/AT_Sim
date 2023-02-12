@@ -50,19 +50,20 @@ public class SimTraits : MonoBehaviour
                 exhaustion -= 5;
             }
 
-            Mathf.Clamp(hunger, 0, 100);
-            Mathf.Clamp(exhaustion, 0, 100);
-            Mathf.Clamp(motivation, 0, 100);
-
+            
             if (hunger <= 0 || exhaustion <= 0)
             {
                 health -= 5;
             }
 
-            Mathf.Clamp(health, 0, 100);
+            
 
             needs_timer = max_timer;
         }
+        hunger = Mathf.Clamp(hunger, 0, 100);
+        exhaustion = Mathf.Clamp(exhaustion, 0, 100);
+        motivation = Mathf.Clamp(motivation, 0, 100);
+        health = Mathf.Clamp(health, 0, 100);
     }
 
     public void SetActivity(bool value)
