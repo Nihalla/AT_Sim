@@ -10,6 +10,7 @@ public class SimTraits : MonoBehaviour
     private float movement_speed = 5f;
     private float multiplier_bonus = 1f;
     private bool in_activity = false;
+    public bool in_objective = false;
 
     // Needs
     private int hunger = 100;
