@@ -22,6 +22,7 @@ public class SimTraits : MonoBehaviour
     private float timer_multiplier = 1f;
     [SerializeField] private float max_timer = 60f;
     private float needs_timer;
+    public float attack_range = 1f;
     
     public enum Personality
     {
@@ -35,6 +36,11 @@ public class SimTraits : MonoBehaviour
     void Start()
     {
         needs_timer = max_timer;
+        if(sim_personality == Personality.BRAVE)
+        {
+            GetComponent<SphereCollider>().radius *= 2;
+            attack_range *= 2;
+        }
     }
 
     // Update is called once per frame
@@ -128,6 +134,12 @@ public class SimTraits : MonoBehaviour
             case "food":
                 hunger += value_inc;
                 break;
+        }
+
+        if(health <= 0)
+        {
+            GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>().RemoveVillager(gameObject);
+            Destroy(gameObject);
         }
     }
 }

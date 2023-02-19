@@ -88,6 +88,11 @@ public class LocationType : MonoBehaviour
         UpdateIsFull();
     }
 
+    public int GetCapacity()
+    {
+        return capacity;
+    }
+
  /*   private void OnTriggerEnter(Collider collision)
     {
         if (!is_full)

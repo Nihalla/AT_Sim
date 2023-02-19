@@ -46,7 +46,7 @@ public class NPC_UI : MonoBehaviour
         {
             character_info.text = "Nobody selected";
         }
-        resource_info.text = "V - " + resources.CheckResources("v") +
+        resource_info.text = "V - " + resources.CheckResources("v") + "/" + GetComponent<ResourcesManage>().village_capacity +
                 " F - " + resources.CheckResources("food") +
                 " M - " + resources.CheckResources("mats") +
                 " H - " + resources.CheckResources("herbs");

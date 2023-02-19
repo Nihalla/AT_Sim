@@ -27,7 +27,8 @@ public class SimBehaviours : MonoBehaviour
     private ResourcesManage resources;
     private Location_Manager location_manager;
 
-
+    private GameObject target;
+    private float attack_timer = 1f;
 
     private float max_dist = 5f;
 
@@ -81,6 +82,7 @@ public class SimBehaviours : MonoBehaviour
                 ResolveHunting();
                 break;
             case Sim_State.FIGHTING:
+                ResolveFighting();
                 break;
             case Sim_State.FORAGING:
                 ResolveForaging();
@@ -385,6 +387,34 @@ public class SimBehaviours : MonoBehaviour
         }
     }
 
+    private void ResolveFighting()
+    {
+        if (target != null)
+        {
+            if (CheckDistance(target) <= GetComponent<SimTraits>().attack_range)
+            {
+                if (attack_timer <= 0)
+                {
+                    target.GetComponent<Enemy_AI>().TakeDamage();
+                    attack_timer = 1f;
+                }
+                else
+                {
+                    attack_timer -= Time.deltaTime;
+                }
+            }
+            else
+            {
+                agent.destination = target.transform.position;
+            }
+        }
+        else
+        {
+            current_state = Sim_State.IDLE;
+            target = null;
+        }
+    }
+
     private float CheckDistance(GameObject location)
     {
         return Vector3.Distance(location.transform.position, transform.position);
@@ -399,6 +429,7 @@ public class SimBehaviours : MonoBehaviour
     {
         Debug.Log("should change to new state - " + new_state);
         ResetAllTimers();
+        ResetAllLocation();
         idle_loops = 0;
         current_state = new_state;
     }
@@ -409,5 +440,32 @@ public class SimBehaviours : MonoBehaviour
         foraging_timer = 5f;
         hunting_timer = 5f;
         idle_timer = idle_timer_max;
+    }
+
+    private void ResetAllLocation()
+    {
+        nearest_digging_location = null;
+        nearest_food_location = null;
+        nearest_herb_location = null;
+        nearest_hunt_location = null;
+        nearest_sleep_location = null;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if(other.gameObject.tag == "Enemy")
+        {
+            ForceBehaviour(Sim_State.FIGHTING);
+            target = other.gameObject;
+        }
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        if (other.gameObject.tag == "Enemy")
+        {
+            ForceBehaviour(Sim_State.IDLE);
+            target = null;
+        }
     }
 }
