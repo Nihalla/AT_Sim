@@ -14,6 +14,7 @@ public class Enemy_AI : MonoBehaviour
     private bool has_target = false;
     private GameObject target;
     private int hp = 3;
+    private float time_mult = 1f;
     // Start is called before the first frame update
     void Start()
     {
@@ -25,6 +26,19 @@ public class Enemy_AI : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(time_mult != resource_script.time_multiplier)
+        {
+            if (resource_script.time_multiplier == 2)
+            {
+                agent.speed *= 2;
+            }
+            else
+            {
+                agent.speed /= 2;
+            }
+            time_mult = resource_script.time_multiplier;
+        }
+
         float closest_distance = 9999f;
         foreach(GameObject villager in resource_script.GetVillagers())
         {
@@ -44,7 +58,7 @@ public class Enemy_AI : MonoBehaviour
         {
             if(attack_timer >= 0)
             {
-                attack_timer -= Time.deltaTime;
+                attack_timer -= Time.deltaTime * time_mult;
             }
             else
             {

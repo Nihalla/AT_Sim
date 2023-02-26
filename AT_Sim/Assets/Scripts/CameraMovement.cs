@@ -21,6 +21,7 @@ public class CameraMovement : MonoBehaviour
         controls.Player.Move.canceled += ctx => move = Vector2.zero;
         controls.Player.Look.performed += ctx => mouse_pos = ctx.ReadValue<Vector2>();
         controls.Player.Select.performed += ctx => Selection();
+        controls.Player.Deselect.performed += ctx => Deselect();
 
         current_pos = gameObject.transform.position;
     }
@@ -40,16 +41,16 @@ public class CameraMovement : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, 1000f, ~ignore_layer))
         {
-            //Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
+            Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
 
             if (selected_char == null && hit.transform.tag == "Villager")
             {
                 AssignActiveChar(hit);
             }
-            else if (selected_char != null && hit.transform.tag == "Floor")
+            /*else if (selected_char != null && hit.transform.tag == "Floor")
             {
                 Deselect();
-            }
+            }*/
             else if (selected_char != null && hit.transform.gameObject.layer == 3)
             {
                 
@@ -100,13 +101,31 @@ public class CameraMovement : MonoBehaviour
     private void AssignActiveChar(RaycastHit hit)
     {
         selected_char = hit.transform;
+        selected_char.GetChild(0).gameObject.SetActive(true);
         Debug.Log("Current selected villager - " + hit.transform.gameObject.name);
     }
     private void Deselect()
     {
         if (selected_char != null)
         {
+            selected_char.GetChild(0).gameObject.SetActive(false);
             selected_char = null;
+        }
+    }
+
+    public void MagicCure()
+    {
+        if (selected_char != null)
+        {
+            selected_char.GetComponent<SimTraits>().MaxNeeds();
+        }
+    }
+
+    public void ForceDamage()
+    {
+        if (selected_char != null)
+        {
+            selected_char.GetComponent<SimTraits>().HurtHealth();
         }
     }
 

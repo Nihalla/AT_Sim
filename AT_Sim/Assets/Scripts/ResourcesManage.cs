@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class ResourcesManage : MonoBehaviour
 {
@@ -10,6 +11,7 @@ public class ResourcesManage : MonoBehaviour
     [SerializeField] private int population = 0;
     [SerializeField] private GameObject raid_location;
     [SerializeField] private GameObject enemy_prefab;
+    public float time_multiplier = 1;
     private List<GameObject> villager_list = new();
     [SerializeField] private float raid_timer_max = 100f;
     private float raid_timer;
@@ -34,7 +36,7 @@ public class ResourcesManage : MonoBehaviour
     {
         if (raid_timer >= 0)
         {
-            raid_timer -= Time.deltaTime;
+            raid_timer -= Time.deltaTime * time_multiplier;
         }
         else
         {
@@ -98,7 +100,7 @@ public class ResourcesManage : MonoBehaviour
         return villager_list;
     }
 
-    private void SpawnRaid()
+    public void SpawnRaid()
     {
         int number_to_spawn = population / 2;
         for(int i = 0; i < number_to_spawn; i++)
@@ -108,6 +110,40 @@ public class ResourcesManage : MonoBehaviour
                 0.25f,
                 Random.Range((raid_location.transform.position.z - raid_location.transform.localScale.z / 2), (raid_location.transform.position.z + raid_location.transform.localScale.z / 2)));
             Instantiate(enemy_prefab, position, Quaternion.identity);
+        }
+    }
+
+    public void FindNewVillager()
+    {
+        Debug.Log("Looking for new villager!");
+        foreach (GameObject villager in GameObject.FindGameObjectsWithTag("Villager"))
+        {
+            if(!villager_list.Contains(villager))
+            {
+                Debug.Log("New villager found, welcome to the family - " + villager.name);
+                villager.GetComponent<SimTraits>().RandomizeStats();
+                AddToPopulation(villager);
+            }
+        }
+    }
+
+    public void BoostTime()
+    {
+        if(time_multiplier == 1)
+        {
+            time_multiplier = 2;
+            foreach(GameObject villager in villager_list)
+            {
+                villager.GetComponent<NavMeshAgent>().speed *= 2;
+            }
+        }
+        else
+        {
+            time_multiplier = 1;
+            foreach (GameObject villager in villager_list)
+            {
+                villager.GetComponent<NavMeshAgent>().speed /= 2;
+            }
         }
     }
 }

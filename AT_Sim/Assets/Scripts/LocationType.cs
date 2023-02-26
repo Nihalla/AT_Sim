@@ -13,6 +13,7 @@ public class LocationType : MonoBehaviour
     [SerializeField] private float max_timer = 10f;
     private float resource_timer = 10f;
     [SerializeField] private int resource_gain = 100;
+    private List<GameObject> user_list = new();
     public enum Location
     {
         DEFAULT,
@@ -58,12 +59,17 @@ public class LocationType : MonoBehaviour
         }
         else
         {
-            resource_timer -= Time.deltaTime;
+            resource_timer -= Time.deltaTime * GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>().time_multiplier;
         }
     }
     private void UpdateIsFull()
     {
-        is_full = in_location < capacity ? false : true;
+        is_full = user_list.Count < capacity ? false : true;
+        /*Debug.Log("location name - "+gameObject.name);
+        Debug.Log("how many users in location - "+user_list.Count);
+        Debug.Log("how many users allowed in location - "+capacity);
+        Debug.Log("is location full? "+is_full);
+        Debug.Log("===================================================");*/
     }
     public bool IsFull()
     {
@@ -76,16 +82,32 @@ public class LocationType : MonoBehaviour
         return location_type;
     }
 
-    public void AddUser()
-    {
-        in_location++;
-        UpdateIsFull();
+    public int AddUser(GameObject user)
+    { 
+        if(!user_list.Contains(user))
+        {
+            if (is_full)
+            {
+                //Debug.Log(gameObject.name + " is full, find another location");
+                return -1;
+            }
+            user_list.Add(user);
+            //Debug.Log("Added a user to - " + location_type);
+            UpdateIsFull();
+            return 1;
+        }
+        return 1;
     }
 
-    public void RemoveUser()
+    public void RemoveUser(GameObject user)
     {
-        in_location--;
-        UpdateIsFull();
+        if (user_list.Contains(user))
+        {
+            user_list.Remove(user);
+            //Debug.Log("Removed a user from - " + location_type);
+            UpdateIsFull();
+        }
+        
     }
 
     public int GetCapacity()

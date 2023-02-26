@@ -15,6 +15,8 @@ public class SimBehaviours : MonoBehaviour
     [SerializeField] private Sim_State current_state;
     private NavMeshAgent agent;
 
+    private float timer_multiplier = 1f;
+
     [SerializeField] private float idle_timer_max = 5;
     private float idle_timer;
     private float eating_timer = 5f;
@@ -30,7 +32,7 @@ public class SimBehaviours : MonoBehaviour
     private GameObject target;
     private float attack_timer = 1f;
 
-    private float max_dist = 5f;
+    private float max_dist = 2.5f;
 
     public enum Sim_State
     {
@@ -44,7 +46,7 @@ public class SimBehaviours : MonoBehaviour
         HERBING = 7,
         UNKNOWN = -1
     }
- 
+
 
     private void Awake()
     {
@@ -54,20 +56,28 @@ public class SimBehaviours : MonoBehaviour
         resources = GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>();
         location_manager = GameObject.FindGameObjectWithTag("Manager").GetComponent<Location_Manager>();
     }
-    
+
 
     // Start is called before the first frame update
     void Start()
     {
-       /* idle_timer = idle_timer_max;
-        food_location = locations[0];
-        sleep_location = locations[1];
-        hunt_location = locations[2];
-        herb_location = locations[3];
-        digging_location = locations[4];*/
+        /* idle_timer = idle_timer_max;
+         food_location = locations[0];
+         sleep_location = locations[1];
+         hunt_location = locations[2];
+         herb_location = locations[3];
+         digging_location = locations[4];*/
     }
 
     // Update is called once per frame
+
+    private void Update()
+    {
+        if(timer_multiplier != resources.time_multiplier)
+        {
+            timer_multiplier = resources.time_multiplier;
+        }
+    }
     void FixedUpdate()
     {
         switch (current_state)
@@ -136,7 +146,7 @@ public class SimBehaviours : MonoBehaviour
                     current_state = Sim_State.SLEEPING;
                     break;
             }
-            if(current_state == Sim_State.IDLE && idle_loops >= 3)
+            if (current_state == Sim_State.IDLE && idle_loops >= 3)
             {
                 idle_loops = 0;
                 if (resources.CheckResources("food") < 100)
@@ -152,16 +162,77 @@ public class SimBehaviours : MonoBehaviour
         else
         {
             agent.destination = transform.position;
-            idle_timer -= Time.deltaTime;
+            idle_timer -= Time.deltaTime * timer_multiplier;
         }
     }
 
     private void ResolveEating()
     {
+
         if (resources.CheckResources("food") >= 50)
         {
+            if (nearest_food_location == null)
+            {
+                float closest_dist = 999f;
+                foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FOODSPOT))
+                {
+                    if (!point.GetComponentInParent<LocationType>().IsFull())
+                    {
+                        float dist = CheckDistance(point);
+                        if (dist < closest_dist)
+                        {
+                            closest_dist = dist;
+                            nearest_food_location = point;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                if (nearest_food_location.GetComponentInParent<LocationType>().AddUser(gameObject) == 1)
+                {
+                    if (CheckDistance(nearest_food_location) < max_dist)
+                    {
+                        if (!traits_script.in_objective)
+                        {
+
+                            traits_script.in_objective = true;
+                        }
+
+                        eating_timer -= Time.deltaTime * timer_multiplier;
+                        if (eating_timer <= 0)
+                        {
+                            current_state = Sim_State.IDLE;
+                            eating_timer = 5f;
+                            traits_script.UpdateNeeds("food", 100);
+                            resources.UpdateResources("food", -50);
+                            nearest_food_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+                            nearest_food_location = null;
+                        }
+                    }
+                    else
+                    {
+                        agent.destination = nearest_food_location.transform.position;
+                    }
+                }
+                else
+                {
+                    nearest_food_location = null;
+                }
+            }
+        }
+        else
+        {
+            current_state = Sim_State.HUNTING;
+        }
+    }
+
+    private void ResolveSleeping()
+    {
+        if (nearest_sleep_location == null)
+        {
             float closest_dist = 999f;
-            foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FOODSPOT))
+            foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.HOME))
             {
                 if (!point.GetComponentInParent<LocationType>().IsFull())
                 {
@@ -169,81 +240,46 @@ public class SimBehaviours : MonoBehaviour
                     if (dist < closest_dist)
                     {
                         closest_dist = dist;
-                        nearest_food_location = point;
+                        nearest_sleep_location = point;
                     }
-                }
-            }
-            if (nearest_food_location != null)
-            {
-                if (CheckDistance(nearest_food_location) < max_dist)
-                {
-                    if(!traits_script.in_objective)
-                    {
-                        nearest_food_location.GetComponentInParent<LocationType>().AddUser();
-                        traits_script.in_objective = true;
-                    }
-                   
-                    eating_timer -= Time.deltaTime;
-                    if (eating_timer <= 0)
-                    {
-                        current_state = Sim_State.IDLE;
-                        eating_timer = 5f;
-                        traits_script.UpdateNeeds("food", 100);
-                        resources.UpdateResources("food", -50);
-                        nearest_food_location.GetComponentInParent<LocationType>().RemoveUser();
-                        nearest_food_location = null;
-                    }
-                }
-                else
-                {
-                    agent.destination = nearest_food_location.transform.position;
                 }
             }
         }
         else
         {
-            current_state = Sim_State.HUNTING; 
-        }
-    }
+            if (nearest_sleep_location.GetComponentInParent<LocationType>().AddUser(gameObject) == 1)
+            {
+                if (CheckDistance(nearest_sleep_location) < max_dist)
+                {
+                    if (!traits_script.in_objective)
+                    {
 
-    private void ResolveSleeping()
-    {
-        float closest_dist = 999f;
-        foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.HOME))
-        {
-            if (!point.GetComponentInParent<LocationType>().IsFull())
-            {
-                float dist = CheckDistance(point);
-                if (dist < closest_dist)
-                {
-                    closest_dist = dist;
-                    nearest_sleep_location = point;
+                        traits_script.in_objective = true;
+                    }
+                    sleeping_timer -= Time.deltaTime * timer_multiplier;
+                    if (sleeping_timer <= 0)
+                    {
+                        if(traits_script.CheckNeed("hp") <= 50)
+                        {
+                            traits_script.UpdateNeeds("hp", 10);
+                            resources.UpdateResources("herbs", -2);
+                        }
+                        current_state = Sim_State.IDLE;
+                        sleeping_timer = 5f;
+                        traits_script.UpdateNeeds("sleep", 100);
+                        traits_script.UpdateNeeds("hp", 10);
+                        nearest_sleep_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+                        nearest_sleep_location = null;
+                    }
                 }
-            }
-        }
-        if (nearest_sleep_location != null)
-        {
-            if (CheckDistance(nearest_sleep_location) < max_dist)
-            {
-                if (!traits_script.in_objective)
+                else
                 {
-                    nearest_sleep_location.GetComponentInParent<LocationType>().AddUser();
-                    traits_script.in_objective = true;
-                }
-                sleeping_timer -= Time.deltaTime;
-                if (sleeping_timer <= 0)
-                {
-                    current_state = Sim_State.IDLE;
-                    sleeping_timer = 5f;
-                    traits_script.UpdateNeeds("sleep", 100);
-                    traits_script.UpdateNeeds("hp", 10);
-                    nearest_sleep_location.GetComponentInParent<LocationType>().RemoveUser();
-                    nearest_sleep_location = null;
+                    agent.destination = nearest_sleep_location.transform.position;
                 }
             }
             else
             {
-                agent.destination = nearest_sleep_location.transform.position;
+                nearest_sleep_location = null;
             }
         }
     }
@@ -255,134 +291,186 @@ public class SimBehaviours : MonoBehaviour
 
     private void ResolveHunting()
     {
-        //Debug.Log("Trying to resolve hunting state");
-        float closest_dist = 999f;
-        foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FOREST))
-        {
-            //Debug.Log("Checking if available");
-            if (!point.GetComponentInParent<LocationType>().IsFull())
+        if (nearest_hunt_location == null)
+        {//Debug.Log("Trying to resolve hunting state");
+            float closest_dist = 999f;
+            foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FOREST))
             {
-                //Debug.Log("Checking if closest");
-                float dist = CheckDistance(point);
-                if (dist < closest_dist)
+                //Debug.Log("Checking if available");
+                if (!point.GetComponentInParent<LocationType>().IsFull())
                 {
-                    //Debug.Log("Closest!");
-                    closest_dist = dist;
-                    nearest_hunt_location = point;
+                    //Debug.Log("Checking if closest");
+                    float dist = CheckDistance(point);
+                    if (dist < closest_dist)
+                    {
+                        //Debug.Log("Closest!");
+                        closest_dist = dist;
+                        nearest_hunt_location = point;
+                    }
                 }
             }
         }
-        if (nearest_hunt_location != null)
+        else
         {
-            //Debug.Log("Closest exists so if not in range should move to place!");
-            if (CheckDistance(nearest_hunt_location) < max_dist)
+            if (nearest_hunt_location.GetComponentInParent<LocationType>().AddUser(gameObject) == 1)
             {
-                if (!traits_script.in_objective)
+                //Debug.Log("Closest exists so if not in range should move to place!");
+                if (CheckDistance(nearest_hunt_location) < max_dist)
                 {
-                    traits_script.in_objective = true;
-                    nearest_hunt_location.GetComponentInParent<LocationType>().AddUser();
-                    traits_script.SetActivity(true);
+                    if (!traits_script.in_objective)
+                    {
+                        traits_script.in_objective = true;
+
+                        traits_script.SetActivity(true);
+                    }
+                    hunting_timer -= Time.deltaTime * timer_multiplier;
+                    if (hunting_timer <= 0)
+                    {
+                        hunting_timer = 5f;
+                        if (traits_script.GetPersonality() == SimTraits.Personality.HUNTER)
+                        {
+                            resources.UpdateResources("food", 100 * traits_script.multiplier_bonus);
+                        }
+                        else
+                        {
+                            resources.UpdateResources("food", 100);
+                        }
+
+                        traits_script.UpdateNeeds("sleep", -20);
+                        current_state = Sim_State.IDLE;
+                        nearest_hunt_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+                        nearest_hunt_location = null;
+                    }
                 }
-                hunting_timer -= Time.deltaTime;
-                if (hunting_timer <= 0)
+                else
                 {
-                    hunting_timer = 5f;
-                    resources.UpdateResources("food", 100);
-                    traits_script.UpdateNeeds("sleep", -20);
-                    current_state = Sim_State.IDLE;
-                    nearest_hunt_location.GetComponentInParent<LocationType>().RemoveUser();
-                    nearest_hunt_location = null;
+                    agent.destination = nearest_hunt_location.transform.position;
                 }
             }
             else
             {
-                agent.destination = nearest_hunt_location.transform.position;
+                nearest_hunt_location = null;
             }
         }
     }
     private void ResolveHerbing()
     {
-        float closest_dist = 999f;
-        foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FORAGRY))
+        if (nearest_herb_location == null)
         {
-            if (!point.GetComponentInParent<LocationType>().IsFull())
+            float closest_dist = 999f;
+            foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.FORAGRY))
             {
-                float dist = CheckDistance(point);
-                if (dist < closest_dist)
+                if (!point.GetComponentInParent<LocationType>().IsFull())
                 {
-                    closest_dist = dist;
-                    nearest_herb_location = point;
+                    float dist = CheckDistance(point);
+                    if (dist < closest_dist)
+                    {
+                        closest_dist = dist;
+                        nearest_herb_location = point;
+                    }
                 }
             }
         }
-        if (nearest_herb_location != null)
+        else
         {
-            if (CheckDistance(nearest_herb_location) < max_dist)
+            if (nearest_herb_location.GetComponentInParent<LocationType>().AddUser(gameObject) == 1)
             {
-                if (!traits_script.in_objective)
+                if (CheckDistance(nearest_herb_location) < max_dist)
                 {
-                    nearest_herb_location.GetComponentInParent<LocationType>().AddUser();
-                    traits_script.in_objective = true;
-                    traits_script.SetActivity(true);
+                    if (!traits_script.in_objective)
+                    {
+
+                        traits_script.in_objective = true;
+                        traits_script.SetActivity(true);
+                    }
+                    foraging_timer -= Time.deltaTime * timer_multiplier;
+                    if (foraging_timer <= 0)
+                    {
+                        foraging_timer = 5f;
+                        if (traits_script.GetPersonality() == SimTraits.Personality.FORAGER)
+                        {
+                            resources.UpdateResources("herbs", 5 * traits_script.multiplier_bonus);
+                        }
+                        else
+                        {
+                            resources.UpdateResources("herbs", 5);
+                        }
+
+                        traits_script.UpdateNeeds("sleep", -10);
+                        current_state = Sim_State.IDLE;
+                        nearest_herb_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+                        nearest_herb_location = null;
+                    }
                 }
-                foraging_timer -= Time.deltaTime;
-                if (foraging_timer <= 0)
+                else
                 {
-                    foraging_timer = 5f;
-                    resources.UpdateResources("herbs", 5);
-                    traits_script.UpdateNeeds("sleep", -10);
-                    current_state = Sim_State.IDLE;
-                    nearest_herb_location.GetComponentInParent<LocationType>().RemoveUser();
-                    nearest_herb_location = null;
+                    agent.destination = nearest_herb_location.transform.position;
                 }
             }
             else
             {
-                agent.destination = nearest_herb_location.transform.position;
+                nearest_herb_location = null;
             }
         }
     }
 
     private void ResolveDigging()
     {
-        float closest_dist = 999f;
-        foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.QUARRY))
+        if (nearest_digging_location == null)
         {
-            if (!point.GetComponentInParent<LocationType>().IsFull())
+            float closest_dist = 999f;
+            foreach (GameObject point in location_manager.GetLocationsOfType(LocationType.Location.QUARRY))
             {
-                float dist = CheckDistance(point);
-                if (dist < closest_dist)
+                if (!point.GetComponentInParent<LocationType>().IsFull())
                 {
-                    closest_dist = dist;
-                    nearest_digging_location = point;
+                    float dist = CheckDistance(point);
+                    if (dist < closest_dist)
+                    {
+                        closest_dist = dist;
+                        nearest_digging_location = point;
+                    }
                 }
             }
         }
-        if (nearest_digging_location != null)
+        else
         {
-            if (CheckDistance(nearest_digging_location) < max_dist)
+            if (nearest_digging_location.GetComponentInParent<LocationType>().AddUser(gameObject) == 1)
             {
-                if (!traits_script.in_objective)
+                if (CheckDistance(nearest_digging_location) < max_dist)
                 {
-                    nearest_digging_location.GetComponentInParent<LocationType>().AddUser();
-                    traits_script.in_objective = true;
-                    traits_script.SetActivity(true);
+                    if (!traits_script.in_objective)
+                    {
+
+                        traits_script.in_objective = true;
+                        traits_script.SetActivity(true);
+                    }
+                    foraging_timer -= Time.deltaTime * timer_multiplier;
+                    if (foraging_timer <= 0)
+                    {
+                        foraging_timer = 5f;
+                        if (traits_script.GetPersonality() == SimTraits.Personality.FORAGER)
+                        {
+                            resources.UpdateResources("mats", 100 * traits_script.multiplier_bonus);
+                        }
+                        else
+                        {
+                            resources.UpdateResources("mats", 100);
+                        }
+                        traits_script.UpdateNeeds("sleep", -5);
+                        traits_script.UpdateNeeds("food", -5);
+                        current_state = Sim_State.IDLE;
+                        nearest_digging_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+                        nearest_digging_location = null;
+                    }
                 }
-                foraging_timer -= Time.deltaTime;
-                if (foraging_timer <= 0)
+                else
                 {
-                    foraging_timer = 5f;
-                    resources.UpdateResources("mats", 100);
-                    traits_script.UpdateNeeds("sleep", -5);
-                    traits_script.UpdateNeeds("food", -5);
-                    current_state = Sim_State.IDLE;
-                    nearest_digging_location.GetComponentInParent<LocationType>().RemoveUser();
-                    nearest_digging_location = null;
+                    agent.destination = nearest_digging_location.transform.position;
                 }
             }
             else
             {
-                agent.destination = nearest_digging_location.transform.position;
+                nearest_digging_location = null;
             }
         }
     }
@@ -396,11 +484,15 @@ public class SimBehaviours : MonoBehaviour
                 if (attack_timer <= 0)
                 {
                     target.GetComponent<Enemy_AI>().TakeDamage();
+                    if (traits_script.GetPersonality() == SimTraits.Personality.BRAVE)
+                    {
+                        target.GetComponent<Enemy_AI>().TakeDamage();
+                    }
                     attack_timer = 1f;
                 }
                 else
                 {
-                    attack_timer -= Time.deltaTime;
+                    attack_timer -= Time.deltaTime * timer_multiplier;
                 }
             }
             else
@@ -410,8 +502,8 @@ public class SimBehaviours : MonoBehaviour
         }
         else
         {
-            current_state = Sim_State.IDLE;
             target = null;
+            current_state = Sim_State.IDLE;
         }
     }
 
@@ -444,6 +536,26 @@ public class SimBehaviours : MonoBehaviour
 
     private void ResetAllLocation()
     {
+        if (nearest_digging_location != null)
+        {
+            nearest_digging_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+        }
+        if (nearest_food_location != null)
+        {
+            nearest_food_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+        }
+        if (nearest_herb_location != null)
+        {
+            nearest_herb_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+        }
+        if (nearest_hunt_location != null)
+        {
+            nearest_hunt_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+        }
+        if (nearest_sleep_location != null)
+        {
+            nearest_sleep_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
+        }
         nearest_digging_location = null;
         nearest_food_location = null;
         nearest_herb_location = null;
@@ -453,10 +565,19 @@ public class SimBehaviours : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.tag == "Enemy")
+        if (other.gameObject.tag == "Enemy")
         {
-            ForceBehaviour(Sim_State.FIGHTING);
             target = other.gameObject;
+            ForceBehaviour(Sim_State.FIGHTING);
+        }
+    }
+
+    public void OnTriggerStay(Collider other)
+    {
+        if ((other.gameObject.tag == "Enemy") && target == null)
+        {
+            target = other.gameObject;
+            ForceBehaviour(Sim_State.FIGHTING);
         }
     }
 
@@ -464,8 +585,8 @@ public class SimBehaviours : MonoBehaviour
     {
         if (other.gameObject.tag == "Enemy")
         {
-            ForceBehaviour(Sim_State.IDLE);
             target = null;
+            ForceBehaviour(Sim_State.IDLE);
         }
     }
 }

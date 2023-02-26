@@ -5,12 +5,16 @@ using UnityEngine;
 public class SimTraits : MonoBehaviour
 {
     [SerializeField] private Personality sim_personality;
+    private ResourcesManage manager_res_script;
+    [SerializeField] private GameObject prefab;
 
     // Stats
     private float movement_speed = 5f;
-    private float multiplier_bonus = 1f;
+    public int multiplier_bonus = 2;
     private bool in_activity = false;
     public bool in_objective = false;
+    private bool can_have_children = true;
+    public float attack_range = 1f;
 
     // Needs
     private int hunger = 100;
@@ -22,8 +26,9 @@ public class SimTraits : MonoBehaviour
     private float timer_multiplier = 1f;
     [SerializeField] private float max_timer = 60f;
     private float needs_timer;
-    public float attack_range = 1f;
-    
+    [SerializeField] private float offspring_timer_max = 100f;
+    private float offspring_timer;
+
     public enum Personality
     {
         BASIC = 0,
@@ -32,35 +37,48 @@ public class SimTraits : MonoBehaviour
         FORAGER = 3
     };
 
-    // Start is called before the first frame update
-    void Start()
+    private void Awake()
     {
         needs_timer = max_timer;
-        if(sim_personality == Personality.BRAVE)
+        offspring_timer = offspring_timer_max;
+        manager_res_script = GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>();
+    }
+
+    void Start()
+    {
+        if (sim_personality == Personality.BRAVE)
         {
             GetComponent<SphereCollider>().radius *= 2;
             attack_range *= 2;
+        }
+        if (Random.Range(1, 5) == 1)
+        {
+            can_have_children = false;
         }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if(timer_multiplier != manager_res_script.time_multiplier)
+        {
+            timer_multiplier = manager_res_script.time_multiplier;
+        }
         needs_timer -= Time.deltaTime * timer_multiplier;
         if (needs_timer <= 0)
         {
-            hunger -= 5;
-            exhaustion -= 5;
+            hunger -= 2;
+            exhaustion -= 2;
             if(in_activity)
             {
-                motivation -= 5;
-                exhaustion -= 5;
+                motivation -= 3;
+                exhaustion -= 3;
             }
 
             
             if (hunger <= 0 || exhaustion <= 0)
             {
-                health -= 5;
+                health -= 2;
             }
 
             
@@ -71,6 +89,24 @@ public class SimTraits : MonoBehaviour
         exhaustion = Mathf.Clamp(exhaustion, 0, 100);
         motivation = Mathf.Clamp(motivation, 0, 100);
         health = Mathf.Clamp(health, 0, 100);
+
+        if( (can_have_children) && 
+            (manager_res_script.CheckResources("v") < manager_res_script.village_capacity) &&
+            (health > 50))
+        {
+            offspring_timer -= Time.deltaTime * timer_multiplier;
+            if(offspring_timer <= 0)
+            {
+                offspring_timer = offspring_timer_max;
+                SpawnCreature();
+            }
+        }
+        
+        if (health <= 0)
+        {
+            manager_res_script.RemoveVillager(gameObject);
+            Destroy(gameObject);
+        }
     }
 
     public void SetActivity(bool value)
@@ -134,12 +170,55 @@ public class SimTraits : MonoBehaviour
             case "food":
                 hunger += value_inc;
                 break;
-        }
+        }    
+    }
 
-        if(health <= 0)
+    public void MaxNeeds()
+    {
+        health = 100;
+        exhaustion = 100;
+        hunger = 100;
+    }
+
+    public void HurtHealth()
+    {
+        health -= 10;
+    }
+
+    public void SpawnCreature()
+    {
+        Instantiate(prefab, new Vector3(0, 0, 0), Quaternion.identity);
+        manager_res_script.FindNewVillager();   
+    }
+
+    public void RandomizeStats()
+    {
+        int personality_roll;
+        personality_roll = Random.Range(1, 4);
+        switch(personality_roll)
         {
-            GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>().RemoveVillager(gameObject);
-            Destroy(gameObject);
+            case 1:
+                sim_personality = Personality.BASIC;
+                break;
+            case 2:
+                sim_personality = Personality.BRAVE;
+                break;
+            case 3:
+                sim_personality = Personality.HUNTER;
+                break;
+            case 4:
+                sim_personality = Personality.FORAGER;
+                break;
+        }
+        needs_timer = max_timer;
+        if (sim_personality == Personality.BRAVE)
+        {
+            GetComponent<SphereCollider>().radius *= 2;
+            attack_range *= 2;
+        }
+        if (Random.Range(1, 5) == 1)
+        {
+            can_have_children = false;
         }
     }
 }
