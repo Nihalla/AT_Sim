@@ -14,6 +14,11 @@ public class LocationType : MonoBehaviour
     private float resource_timer = 10f;
     [SerializeField] private int resource_gain = 100;
     private List<GameObject> user_list = new();
+    public bool intersects = false;
+    private Collider loc_collider;
+    private Location_Manager loc_manager;
+    public bool placed_down = true;
+
     public enum Location
     {
         DEFAULT,
@@ -26,6 +31,8 @@ public class LocationType : MonoBehaviour
 
     private void Start()
     {
+        loc_manager = FindObjectOfType<Location_Manager>();
+        loc_collider = GetComponent<Collider>();
         resource_timer = max_timer;
         switch (location_type)
         {
@@ -52,7 +59,26 @@ public class LocationType : MonoBehaviour
 
     private void Update()
     {
-        if(resource_timer <= 0)
+        if (!placed_down)
+        {
+            int intersection_points = 0;
+            foreach (GameObject location in loc_manager.GetLocations())
+            {
+                if (loc_collider.bounds.Intersects(location.GetComponentInParent<Collider>().bounds))
+                {
+                    intersection_points++;
+                }
+            }
+            if(intersection_points > 0)
+            {
+                intersects = true;
+            }
+            else
+            {
+                intersects = false;
+            }
+        }
+        if (resource_timer <= 0)
         {
             resource_timer = max_timer;
             resource_held += resource_gain;
@@ -83,8 +109,8 @@ public class LocationType : MonoBehaviour
     }
 
     public int AddUser(GameObject user)
-    { 
-        if(!user_list.Contains(user))
+    {
+        if (!user_list.Contains(user))
         {
             if (is_full)
             {
@@ -107,38 +133,11 @@ public class LocationType : MonoBehaviour
             //Debug.Log("Removed a user from - " + location_type);
             UpdateIsFull();
         }
-        
+
     }
 
     public int GetCapacity()
     {
         return capacity;
     }
-
- /*   private void OnTriggerEnter(Collider collision)
-    {
-        if (!is_full)
-        {
-            if (collision.gameObject.tag == "Villager")
-            {
-                
-                    in_location++;
-                    UpdateIsFull();
-                
-            }
-        }
-    }
-
-    private void OnTriggerExit(Collider collision)
-    {
-        if (!is_full)
-        {
-            if (collision.gameObject.tag == "Villager")
-            {
-                in_location--;
-                UpdateIsFull();
-            }
-        }
-    }*/
-
 }

@@ -55,6 +55,10 @@ public class Location_Manager : MonoBehaviour
         
     }
 
+    public List<GameObject> GetLocations()
+    {
+        return locations;
+    }
     public List<GameObject> GetLocationsOfType(LocationType.Location location_to_find)
     {
         switch (location_to_find)
@@ -97,6 +101,35 @@ public class Location_Manager : MonoBehaviour
                 break;
             case LocationType.Location.FOODSPOT:
                 food_locations.Add(location);
+                break;
+        }
+    }
+
+    public void AddLocation(GameObject location)
+    {
+        Debug.Log(location.name + " added");
+        LocationType script = location.GetComponent<LocationType>();
+        object_to_add = location.transform.GetChild(0).gameObject;
+        locations.Add(object_to_add);
+        switch (script.GetLocationType())
+        {
+            case LocationType.Location.DEFAULT:
+                Debug.Log("SHOULD NOT HAPPEN!");
+                break;
+            case LocationType.Location.HOME:
+                sleep_locations.Add(object_to_add);
+                break;
+            case LocationType.Location.FORAGRY:
+                herb_locations.Add(object_to_add);
+                break;
+            case LocationType.Location.QUARRY:
+                digging_locations.Add(object_to_add);
+                break;
+            case LocationType.Location.FOREST:
+                hunt_locations.Add(object_to_add);
+                break;
+            case LocationType.Location.FOODSPOT:
+                food_locations.Add(object_to_add);
                 break;
         }
     }
