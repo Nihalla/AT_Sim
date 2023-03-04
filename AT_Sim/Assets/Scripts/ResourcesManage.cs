@@ -115,12 +115,12 @@ public class ResourcesManage : MonoBehaviour
 
     public void FindNewVillager()
     {
-        Debug.Log("Looking for new villager!");
+        //Debug.Log("Looking for new villager!");
         foreach (GameObject villager in GameObject.FindGameObjectsWithTag("Villager"))
         {
             if(!villager_list.Contains(villager))
             {
-                Debug.Log("New villager found, welcome to the family - " + villager.name);
+                //Debug.Log("New villager found, welcome to the family - " + villager.name);
                 villager.GetComponent<SimTraits>().RandomizeStats();
                 AddToPopulation(villager);
             }
