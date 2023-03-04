@@ -42,10 +42,13 @@ public class Enemy_AI : MonoBehaviour
         float closest_distance = 9999f;
         foreach(GameObject villager in resource_script.GetVillagers())
         {
-           if(Vector3.Distance(villager.transform.position, transform.position) < closest_distance)
+            if (villager != null)
             {
-                closest_distance = Vector3.Distance(villager.transform.position, transform.position);
-                target = villager;
+                if (Vector3.Distance(villager.transform.position, transform.position) < closest_distance)
+                {
+                    closest_distance = Vector3.Distance(villager.transform.position, transform.position);
+                    target = villager;
+                }
             }
         }
 
@@ -96,8 +99,11 @@ public class Enemy_AI : MonoBehaviour
 
     private void Attack()
     {
-        target.GetComponent<SimTraits>().UpdateNeeds("hp", -10);
-        attack_timer = attack_timer_max;
+        if (target != null)
+        {
+            target.GetComponent<SimTraits>().UpdateNeeds("hp", -40);
+            attack_timer = attack_timer_max;
+        }
     }
 
     public void TakeDamage()

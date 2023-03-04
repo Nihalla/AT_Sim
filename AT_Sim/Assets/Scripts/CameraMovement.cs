@@ -20,6 +20,7 @@ public class CameraMovement : MonoBehaviour
     [SerializeField] private LayerMask ignore_layer;
     private Vector3 selection_XY;
     public GameObject ground;
+    private ResourcesManage resources_script;
     Plane plane;
 
     void Awake()
@@ -34,6 +35,7 @@ public class CameraMovement : MonoBehaviour
         current_pos = gameObject.transform.position;
 
         build_type_script = FindObjectOfType<BuildingOptions>();
+        resources_script = FindObjectOfType<ResourcesManage>();
     }
 
     private void Start()
@@ -50,7 +52,7 @@ public class CameraMovement : MonoBehaviour
 
         var ray = Camera.main.ScreenPointToRay(mouse_pos);
         float ent;
-        if(plane.Raycast(ray, out ent))
+        if (plane.Raycast(ray, out ent))
         {
             selection_XY = ray.GetPoint(ent);
             if (in_build_mode && building_to_place != null)
@@ -59,27 +61,6 @@ public class CameraMovement : MonoBehaviour
             }
 
         }
-
-        /*if (in_build_mode && building_to_place != null)
-        {
-            Vector3 Worldpos = Camera.main.ScreenToWorldPoint(mouse_pos);
-            selection_XY = Worldpos;
-            RaycastHit hit;
-            Debug.DrawRay(Camera.main.transform.position, new Vector3(selection_XY.x, 0, selection_XY.y) - Camera.main.transform.position, Color.red);
-
-            //if (Physics.Raycast(Camera.main.transform.position, new Vector3(selection_XY.x, 0, selection_XY.y) - Camera.main.transform.position, out hit))
-            //{
-                //Transform objectHit = hit.transform;
-
-                //if (objectHit.gameObject.tag == "Floor")
-                //{
-                    building_to_place.transform.position = new Vector3(selection_XY.x, 0, selection_XY.y);
-                //}
-            //}
-        }*/
-
-        //Ray ray = Camera.main.ScreenPointToRay(mouse_pos);
-
     }
 
     private void Selection()
@@ -92,7 +73,7 @@ public class CameraMovement : MonoBehaviour
         {
             if (Physics.Raycast(ray, out hit, 1000f, ~ignore_layer))
             {
-                Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
+                //Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
 
                 if (selected_char == null && hit.transform.tag == "Villager")
                 {
@@ -154,13 +135,13 @@ public class CameraMovement : MonoBehaviour
                     FindObjectOfType<ResourcesManage>().UpdateCapacity(4);
                 }
                 FindObjectOfType<Location_Manager>().AddLocation(building_to_place);
-
+                building_to_place.GetComponent<LocationType>().placed_down = true;
                 building_to_place = null;
                 selected_build = null;
                 in_build_mode = false;
             }
             else
-            { Debug.Log("SCREEEEEEEEEEEEEEEEEEEEEEEEE"); }
+            { Debug.Log("Buildings interescting, can not bulid here"); }
         }
     }
     public Transform GetSelectedChar()
@@ -200,20 +181,28 @@ public class CameraMovement : MonoBehaviour
 
     public void PlaceHomeBuilding()
     {
-        Deselect();
-        in_build_mode = true;
-        selected_build = build_type_script.home_prefab;
-        building_to_place = Instantiate(selected_build, Vector3.zero, Quaternion.identity);
-        building_to_place.GetComponent<LocationType>().placed_down = false;
+        if(resources_script.CheckResources("mats") >= 5000)
+        {
+            Deselect();
+            in_build_mode = true;
+            selected_build = build_type_script.home_prefab;
+            building_to_place = Instantiate(selected_build, Vector3.zero, Quaternion.identity);
+            building_to_place.GetComponent<LocationType>().placed_down = false;
+            resources_script.UpdateResources("mats", -5000);
+        }  
     }
 
     public void PlaceFoodBulding()
     {
-        Deselect();
-        in_build_mode = true;
-        selected_build = build_type_script.food_prefab;
-        building_to_place = Instantiate(selected_build, Vector3.zero, Quaternion.identity);
-        building_to_place.GetComponent<LocationType>().placed_down = false;
+        if (resources_script.CheckResources("mats") >= 2500)
+        {
+            Deselect();
+            in_build_mode = true;
+            selected_build = build_type_script.food_prefab;
+            building_to_place = Instantiate(selected_build, Vector3.zero, Quaternion.identity);
+            building_to_place.GetComponent<LocationType>().placed_down = false;
+            resources_script.UpdateResources("mats", -2500);
+        }
     }
 
     private void OnEnable()

@@ -127,6 +127,11 @@ public class ResourcesManage : MonoBehaviour
         }
     }
 
+    public void UnlimitedResources()
+    {
+        building_mats += 999999;
+        food += 999999;
+    }
     public void BoostTime()
     {
         if(time_multiplier == 1)

@@ -7,12 +7,13 @@ public class LocationType : MonoBehaviour
     [SerializeField] private Location location_type;
     [SerializeField] private int capacity = 2;
     [SerializeField] private int resource_held = 0;
+    private int max_resource_held = 0;
     private bool harvestable = false;
     private int in_location = 0;
     private bool is_full = false;
-    [SerializeField] private float max_timer = 10f;
-    private float resource_timer = 10f;
-    [SerializeField] private int resource_gain = 100;
+    [SerializeField] private float max_timer = 20f;
+    private float resource_timer = 20f;
+    [SerializeField] private int resource_gain = 50;
     private List<GameObject> user_list = new();
     public bool intersects = false;
     private Collider loc_collider;
@@ -42,15 +43,19 @@ public class LocationType : MonoBehaviour
                 break;
             case Location.FORAGRY:
                 harvestable = true;
-                resource_held = 4;
+                resource_held = 2;
+                resource_gain = 1;
+                max_resource_held = 5;
                 break;
             case Location.QUARRY:
                 harvestable = true;
-                resource_held = 5000;
+                resource_held = 1000;
+                max_resource_held = 2500;
                 break;
             case Location.FOREST:
                 harvestable = true;
-                resource_held = 10000;
+                resource_held = 1000;
+                max_resource_held = 2500;
                 break;
             case Location.FOODSPOT:
                 break;
@@ -69,23 +74,29 @@ public class LocationType : MonoBehaviour
                     intersection_points++;
                 }
             }
-            if(intersection_points > 0)
+            if (intersection_points > 0)
             {
                 intersects = true;
+                transform.GetChild(1).gameObject.SetActive(true);
             }
             else
             {
                 intersects = false;
+                transform.GetChild(1).gameObject.SetActive(false);
             }
         }
-        if (resource_timer <= 0)
+        if (resource_held < max_resource_held)
         {
-            resource_timer = max_timer;
-            resource_held += resource_gain;
-        }
-        else
-        {
-            resource_timer -= Time.deltaTime * GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>().time_multiplier;
+
+            if (resource_timer <= 0)
+            {
+                resource_timer = max_timer;
+                resource_held += resource_gain;
+            }
+            else
+            {
+                resource_timer -= Time.deltaTime * GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>().time_multiplier;
+            }
         }
     }
     private void UpdateIsFull()
@@ -135,7 +146,14 @@ public class LocationType : MonoBehaviour
         }
 
     }
-
+    public int CheckResourceAmount()
+    {
+        return resource_held;
+    }
+    public void RemoveResourceHeld(int amount)
+    {
+        resource_held -= amount;
+    }
     public int GetCapacity()
     {
         return capacity;
