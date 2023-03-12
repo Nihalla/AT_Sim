@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.AI;
 
 public class SimTraits : MonoBehaviour
 {
     [SerializeField] private Personality sim_personality;
     private ResourcesManage manager_res_script;
     [SerializeField] private GameObject prefab;
+    private List<string> names;
 
     // Stats
     private float movement_speed = 5f;
@@ -15,6 +17,7 @@ public class SimTraits : MonoBehaviour
     public bool in_objective = false;
     private bool can_have_children = true;
     public float attack_range = 1f;
+    public int age = 20;
 
     // Needs
     private int hunger = 100;
@@ -28,6 +31,8 @@ public class SimTraits : MonoBehaviour
     private float needs_timer;
     [SerializeField] private float offspring_timer_max = 100f;
     private float offspring_timer;
+    private float age_timer_max = 10f;
+    private float age_timer;
 
     public enum Personality
     {
@@ -41,11 +46,14 @@ public class SimTraits : MonoBehaviour
     {
         needs_timer = max_timer;
         offspring_timer = offspring_timer_max;
+        age_timer = age_timer_max;
         manager_res_script = GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>();
+        names = FindObjectOfType<Name_List>().name_list;
     }
 
     void Start()
     {
+        gameObject.name = names[Random.Range(0 , names.Count)];
         if (sim_personality == Personality.BRAVE)
         {
             GetComponent<SphereCollider>().radius *= 2;
@@ -60,6 +68,40 @@ public class SimTraits : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if(age_timer <= 0)
+        {
+            age++;
+            if (age == 80)
+            {
+                GetComponent<NavMeshAgent>().speed /= 2;
+            }
+            if (age >= 70)
+            {
+                int roll = Random.Range(1, 10);
+                if (age >= 75)
+                {
+                    roll = Random.Range(1, 5);
+                }
+                if (age >= 80)
+                {
+                    roll = Random.Range(1, 3);
+                }
+
+                if (roll == 1)
+                {
+                    KillNPC();
+                }
+                else
+                {
+                    Debug.Log("DEATH ROLLED - " + roll);
+                }
+            }
+            age_timer = age_timer_max;
+        }
+        else
+        {
+            age_timer -= Time.deltaTime * timer_multiplier;
+        }
         if(timer_multiplier != manager_res_script.time_multiplier)
         {
             timer_multiplier = manager_res_script.time_multiplier;
@@ -104,8 +146,7 @@ public class SimTraits : MonoBehaviour
         
         if (health <= 0)
         {
-            manager_res_script.RemoveVillager(gameObject);
-            Destroy(gameObject);
+            KillNPC();
         }
     }
 
@@ -191,8 +232,14 @@ public class SimTraits : MonoBehaviour
         manager_res_script.FindNewVillager();   
     }
 
+    public int GetAge()
+    {
+        return age;
+    }
+
     public void RandomizeStats()
     {
+        age = 0;
         int personality_roll;
         personality_roll = Random.Range(1, 4);
         switch(personality_roll)
@@ -220,5 +267,11 @@ public class SimTraits : MonoBehaviour
         {
             can_have_children = false;
         }
+    }
+
+    private void KillNPC()
+    {
+        manager_res_script.RemoveVillager(gameObject);
+        Destroy(gameObject);
     }
 }

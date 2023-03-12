@@ -73,7 +73,7 @@ public class CameraMovement : MonoBehaviour
         {
             if (Physics.Raycast(ray, out hit, 1000f, ~ignore_layer))
             {
-                //Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
+                Debug.Log("Raycast hit - " + hit.transform.gameObject.name);
 
                 if (selected_char == null && hit.transform.tag == "Villager")
                 {

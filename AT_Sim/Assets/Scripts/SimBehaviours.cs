@@ -23,6 +23,7 @@ public class SimBehaviours : MonoBehaviour
     private float hunting_timer = 5f;
     private float sleeping_timer = 5f;
     private float foraging_timer = 5f;
+    private float roaming_timer = 5f;
 
     private int idle_loops;
 
@@ -34,6 +35,12 @@ public class SimBehaviours : MonoBehaviour
 
     private float max_dist = 2.5f;
 
+    [SerializeField] private GameObject anchor;
+    private Vector2 rand_range = new Vector2(-3, 3);
+    private bool has_roam_location = false;
+
+
+
     public enum Sim_State
     {
         IDLE = 0,
@@ -44,6 +51,7 @@ public class SimBehaviours : MonoBehaviour
         SLEEPING = 5,
         DIGGING = 6,
         HERBING = 7,
+        ROAMING = 8,
         UNKNOWN = -1
     }
 
@@ -55,6 +63,7 @@ public class SimBehaviours : MonoBehaviour
         agent = gameObject.GetComponent<NavMeshAgent>();
         resources = GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>();
         location_manager = GameObject.FindGameObjectWithTag("Manager").GetComponent<Location_Manager>();
+        anchor = GameObject.FindGameObjectWithTag("Anchor");
     }
 
 
@@ -106,6 +115,9 @@ public class SimBehaviours : MonoBehaviour
             case Sim_State.DIGGING:
                 ResolveDigging();
                 break;
+            case Sim_State.ROAMING:
+                ResolveRoaming();
+                break;
             case Sim_State.UNKNOWN:
                 break;
         }
@@ -122,14 +134,18 @@ public class SimBehaviours : MonoBehaviour
             switch (traits_script.CheckDireNeeds())
             {
                 case 0:
+                    if (traits_script.GetAge() < 20)
+                    {
+                        current_state = Sim_State.ROAMING;
+                    }
                     if (traits_script.GetPersonality() == SimTraits.Personality.HUNTER)
                     {
-                        idle_loops = 0;
+                        //idle_loops = 0;
                         current_state = Sim_State.HUNTING;
                     }
                     else if (traits_script.GetPersonality() == SimTraits.Personality.FORAGER)
                     {
-                        idle_loops = 0;
+                        //idle_loops = 0;
                         current_state = Sim_State.FORAGING;
                     }
                     break;
@@ -146,7 +162,8 @@ public class SimBehaviours : MonoBehaviour
                     current_state = Sim_State.SLEEPING;
                     break;
             }
-            if (current_state == Sim_State.IDLE && idle_loops >= 3)
+
+            if (current_state == Sim_State.IDLE && idle_loops >= 3 && traits_script.GetAge() >= 20)
             {
                 idle_loops = 0;
                 if (resources.CheckResources("food") < 100)
@@ -157,6 +174,10 @@ public class SimBehaviours : MonoBehaviour
                 {
                     current_state = Sim_State.FORAGING;
                 }
+            }
+            if (current_state == Sim_State.IDLE && idle_loops < 3)
+            {
+                current_state = Sim_State.ROAMING;
             }
         }
         else
@@ -343,6 +364,7 @@ public class SimBehaviours : MonoBehaviour
                         }
 
                         traits_script.UpdateNeeds("sleep", -20);
+                        idle_loops = 0;
                         current_state = Sim_State.IDLE;
                         nearest_hunt_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
                         nearest_hunt_location = null;
@@ -409,6 +431,7 @@ public class SimBehaviours : MonoBehaviour
                         }
 
                         traits_script.UpdateNeeds("sleep", -10);
+                        idle_loops = 0;
                         current_state = Sim_State.IDLE;
                         nearest_herb_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
                         nearest_herb_location = null;
@@ -476,6 +499,7 @@ public class SimBehaviours : MonoBehaviour
                         }
                         traits_script.UpdateNeeds("sleep", -5);
                         traits_script.UpdateNeeds("food", -5);
+                        idle_loops = 0;
                         current_state = Sim_State.IDLE;
                         nearest_digging_location.GetComponentInParent<LocationType>().RemoveUser(gameObject);
                         nearest_digging_location = null;
@@ -525,6 +549,29 @@ public class SimBehaviours : MonoBehaviour
         }
     }
 
+    private void ResolveRoaming()
+    {
+        if (!has_roam_location)
+        {
+            Vector3 destination = anchor.transform.position + new Vector3(Random.Range(rand_range.x, rand_range.y), 0, Random.Range(rand_range.x, rand_range.y));
+            agent.destination = destination;
+            has_roam_location = true;
+        }
+        else
+        {
+            if (roaming_timer <= 0)
+            {
+                roaming_timer = 5f;
+                has_roam_location = false;
+                current_state = Sim_State.IDLE;
+            }
+            else
+            {
+                roaming_timer -= Time.deltaTime * timer_multiplier;
+            }
+        }
+    }
+
     private float CheckDistance(GameObject location)
     {
         return Vector3.Distance(location.transform.position, transform.position);
@@ -549,6 +596,8 @@ public class SimBehaviours : MonoBehaviour
         eating_timer = 5f;
         foraging_timer = 5f;
         hunting_timer = 5f;
+        roaming_timer = 5f;
+        sleeping_timer = 5f;
         idle_timer = idle_timer_max;
     }
 
@@ -583,28 +632,37 @@ public class SimBehaviours : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.tag == "Enemy")
+        if (traits_script.GetAge() >= 20)
         {
-            target = other.gameObject;
-            ForceBehaviour(Sim_State.FIGHTING);
+            if (other.gameObject.tag == "Enemy")
+            {
+                target = other.gameObject;
+                ForceBehaviour(Sim_State.FIGHTING);
+            }
         }
     }
 
     public void OnTriggerStay(Collider other)
     {
-        if ((other.gameObject.tag == "Enemy") && target == null)
+        if (traits_script.GetAge() >= 20)
         {
-            target = other.gameObject;
-            ForceBehaviour(Sim_State.FIGHTING);
+            if ((other.gameObject.tag == "Enemy") && target == null)
+            {
+                target = other.gameObject;
+                ForceBehaviour(Sim_State.FIGHTING);
+            }
         }
     }
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.gameObject.tag == "Enemy")
+        if (traits_script.GetAge() >= 20)
         {
-            target = null;
-            ForceBehaviour(Sim_State.IDLE);
+            if (other.gameObject.tag == "Enemy")
+            {
+                target = null;
+                ForceBehaviour(Sim_State.IDLE);
+            }
         }
     }
 }
