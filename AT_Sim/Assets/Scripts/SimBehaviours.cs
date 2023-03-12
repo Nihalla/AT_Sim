@@ -11,6 +11,8 @@ public class SimBehaviours : MonoBehaviour
     private GameObject nearest_herb_location;
     private GameObject nearest_digging_location;
 
+    private Vector3 destination;
+
     private SimTraits traits_script;
     [SerializeField] private Sim_State current_state;
     private NavMeshAgent agent;
@@ -36,11 +38,11 @@ public class SimBehaviours : MonoBehaviour
     private float max_dist = 2.5f;
 
     [SerializeField] private GameObject anchor;
-    private Vector2 rand_range = new Vector2(-3, 3);
+    private Vector2 rand_range = new Vector2(-10, 10);
     private bool has_roam_location = false;
 
-
-
+    private Animation_Manager anim_manage;
+    private bool anim_lock = false;
     public enum Sim_State
     {
         IDLE = 0,
@@ -64,6 +66,7 @@ public class SimBehaviours : MonoBehaviour
         resources = GameObject.FindGameObjectWithTag("Manager").GetComponent<ResourcesManage>();
         location_manager = GameObject.FindGameObjectWithTag("Manager").GetComponent<Location_Manager>();
         anchor = GameObject.FindGameObjectWithTag("Anchor");
+        anim_manage = GetComponent<Animation_Manager>();
     }
 
 
@@ -120,6 +123,10 @@ public class SimBehaviours : MonoBehaviour
                 break;
             case Sim_State.UNKNOWN:
                 break;
+        }
+        if (!anim_lock)
+        {
+            anim_manage.UpdateAnimationState(current_state);
         }
     }
 
@@ -272,11 +279,14 @@ public class SimBehaviours : MonoBehaviour
             {
                 if (CheckDistance(nearest_sleep_location) < max_dist)
                 {
+                    anim_lock = true;
                     if (!traits_script.in_objective)
                     {
 
                         traits_script.in_objective = true;
+                        
                     }
+                    anim_manage.SetToSleep();
                     sleeping_timer -= Time.deltaTime * timer_multiplier;
                     if (sleeping_timer <= 0)
                     {
@@ -285,7 +295,9 @@ public class SimBehaviours : MonoBehaviour
                             traits_script.UpdateNeeds("hp", 10);
                             resources.UpdateResources("herbs", -2);
                         }
+                        anim_lock = false;
                         current_state = Sim_State.IDLE;
+                        anim_manage.UpdateAnimationState(current_state);
                         sleeping_timer = 5f;
                         traits_script.UpdateNeeds("sleep", 100);
                         traits_script.UpdateNeeds("hp", 10);
@@ -525,6 +537,7 @@ public class SimBehaviours : MonoBehaviour
             {
                 if (attack_timer <= 0)
                 {
+                    anim_manage.SetToAttack();
                     target.GetComponent<Enemy_AI>().TakeDamage();
                     if (traits_script.GetPersonality() == SimTraits.Personality.BRAVE)
                     {
@@ -553,12 +566,18 @@ public class SimBehaviours : MonoBehaviour
     {
         if (!has_roam_location)
         {
-            Vector3 destination = anchor.transform.position + new Vector3(Random.Range(rand_range.x, rand_range.y), 0, Random.Range(rand_range.x, rand_range.y));
+            destination = anchor.transform.position + new Vector3(Random.Range(rand_range.x, rand_range.y), 0, Random.Range(rand_range.x, rand_range.y));
             agent.destination = destination;
             has_roam_location = true;
         }
         else
         {
+            if(Vector3.Distance(destination, transform.position) < 1f)
+            {
+                destination = anchor.transform.position + new Vector3(Random.Range(rand_range.x, rand_range.y), 0, Random.Range(rand_range.x, rand_range.y));
+                agent.destination = destination;
+            }
+
             if (roaming_timer <= 0)
             {
                 roaming_timer = 5f;

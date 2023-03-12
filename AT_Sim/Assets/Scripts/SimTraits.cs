@@ -9,6 +9,7 @@ public class SimTraits : MonoBehaviour
     private ResourcesManage manager_res_script;
     [SerializeField] private GameObject prefab;
     private List<string> names;
+    private Vector3 default_scale;
 
     // Stats
     private float movement_speed = 5f;
@@ -53,6 +54,7 @@ public class SimTraits : MonoBehaviour
 
     void Start()
     {
+        default_scale = gameObject.transform.localScale;
         gameObject.name = names[Random.Range(0 , names.Count)];
         if (sim_personality == Personality.BRAVE)
         {
@@ -71,6 +73,10 @@ public class SimTraits : MonoBehaviour
         if(age_timer <= 0)
         {
             age++;
+            if (age == 20)
+            {
+                gameObject.transform.localScale = default_scale;
+            }
             if (age == 80)
             {
                 GetComponent<NavMeshAgent>().speed /= 2;
@@ -240,6 +246,8 @@ public class SimTraits : MonoBehaviour
     public void RandomizeStats()
     {
         age = 0;
+        //Debug.Log(gameObject.transform.localScale / 2);
+        gameObject.transform.localScale /= 2;
         int personality_roll;
         personality_roll = Random.Range(1, 4);
         switch(personality_roll)
@@ -272,6 +280,7 @@ public class SimTraits : MonoBehaviour
     private void KillNPC()
     {
         manager_res_script.RemoveVillager(gameObject);
+        GetComponent<Animation_Manager>().SetToSleep();
         Destroy(gameObject);
     }
 }
