@@ -45,6 +45,7 @@ public class SimTraits : MonoBehaviour
 
     private void Awake()
     {
+        default_scale = gameObject.transform.localScale;
         needs_timer = max_timer;
         offspring_timer = offspring_timer_max;
         age_timer = age_timer_max;
@@ -54,7 +55,7 @@ public class SimTraits : MonoBehaviour
 
     void Start()
     {
-        default_scale = gameObject.transform.localScale;
+        
         gameObject.name = names[Random.Range(0 , names.Count)];
         if (sim_personality == Personality.BRAVE)
         {

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.SceneManagement;
 
 public class ResourcesManage : MonoBehaviour
 {
@@ -151,4 +152,15 @@ public class ResourcesManage : MonoBehaviour
             }
         }
     }
+
+    public void ReloadScene()
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    public void CloseGame()
+    {
+        Application.Quit();
+    }
+
 }

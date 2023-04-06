@@ -49,12 +49,16 @@ public class CameraMovement : MonoBehaviour
         
         current_pos.Set(current_pos.x + move.x * Time.deltaTime * camera_speed, current_pos.y, current_pos.z + move.y * Time.deltaTime * camera_speed);
         gameObject.transform.position = current_pos;
+        var pos = transform.position;
+        pos.x = Mathf.Clamp(transform.position.x, -13.0f, 4.0f);
+        pos.z = Mathf.Clamp(transform.position.z, -15.0f, 7.0f);
+        transform.position = pos;
 
-        var ray = Camera.main.ScreenPointToRay(mouse_pos);
-        float ent;
-        if (plane.Raycast(ray, out ent))
+        Ray ray = Camera.main.ScreenPointToRay(mouse_pos);
+        float entrance_distance;
+        if (plane.Raycast(ray, out entrance_distance))
         {
-            selection_XY = ray.GetPoint(ent);
+            selection_XY = ray.GetPoint(entrance_distance);
             if (in_build_mode && building_to_place != null)
             {
                 building_to_place.transform.position = selection_XY;
